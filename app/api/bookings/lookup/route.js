@@ -4,12 +4,18 @@ import { getSettings } from '@/lib/settings';
 import { expireHolds, refundFor } from '@/lib/booking';
 import { settleBooking } from '@/lib/payments';
 import { makeCode } from '@/lib/qr';
+import { meetingLookup } from '@/lib/meeting-guest';
 export const dynamic = 'force-dynamic';
 const load = async (ref) => (await db().from('bookings').select('*, room_types(name)').eq('reference', ref).maybeSingle()).data;
 export const GET = handle(async (req) => {
   const sp = new URL(req.url).searchParams;
   const ref = (sp.get('ref') || '').trim().toUpperCase(), email = (sp.get('email') || '').trim().toLowerCase();
   if (!ref || !email) fail(400, 'Booking reference and email are required.');
+  if (ref.startsWith('MR')) {
+    const m = await meetingLookup(ref, email);
+    if (!m) fail(404, 'Not found');
+    return json({ booking: m });
+  }
   await expireHolds();
   let b = await load(ref);
   if (!b || (b.guest_email || '') !== email) fail(404, 'Not found');

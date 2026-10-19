@@ -25,6 +25,7 @@ export default function SiteChrome({ children }) {
           <Link href="/#rooms">{t('nav_rooms')}</Link>
           <Link href="/#dining">{t('nav_dining')}</Link>
           <Link href="/#events">{t('nav_events')}</Link>
+          <Link href="/meetings">{t('nav_meetings')}</Link>
           <Link href="/booking">{t('nav_booking')}</Link>
           <LangSwitch />
           {settings.phone && <a className="btn sm" href={`tel:${settings.phone}`}>☎ {t('call_reception')}</a>}

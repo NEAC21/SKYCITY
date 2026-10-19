@@ -156,3 +156,13 @@ textarea{min-height:90px;resize:vertical}
 .photos div{position:relative}
 .photos button{position:absolute;top:-6px;right:-6px;border-radius:50%;width:22px;height:22px;border:0;background:var(--danger);color:#fff;cursor:pointer}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* meeting rooms */
+.slots{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 6px}
+.slot{background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:9px 14px;font:inherit;cursor:pointer;text-align:left}
+.slot small{display:block;color:var(--muted)}
+.slot.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(255,159,10,.35)}
+.slot:disabled{opacity:.4;cursor:not-allowed}
+.opt{display:flex;gap:10px;align-items:center;padding:7px 0;cursor:pointer}.opt input{width:auto;flex:none}
+.opt span:last-child{margin-left:auto;color:var(--muted);font-size:14px;white-space:nowrap}
+.rowx{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;padding:12px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px}

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import StaffShell from '@/components/StaffShell';
 import QrScanner from '@/components/QrScanner';
+import MeetingDesk from '@/components/MeetingDesk';
 import { api, money, fmtDate, addDays, todayStr } from '@/lib/client';
 
 const METHODS = [['cash', 'Cash'], ['telebirr', 'Telebirr'], ['bank_transfer', 'Bank transfer'], ['pos', 'POS card'], ['pay_at_checkin', 'Pay at check-in']];
@@ -114,6 +115,9 @@ function Desk({ staff }) {
             </tr>))}
         </tbody></table></div>
       </>}
+
+      <h2>Meeting rooms</h2>
+      <MeetingDesk isAdmin={staff.role === 'admin'} />
 
       {scan && <QrScanner onCode={(c) => { setScan(false); setCode(c); verify(c); }} onClose={() => setScan(false)} />}
       {draft && <BookForm draft={draft} staff={staff} onClose={() => setDraft(null)} onSaved={() => { setDraft(null); load(); if (free) check(); }} />}

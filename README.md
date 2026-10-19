@@ -40,3 +40,11 @@ Redeploy after changing variables. In Chapa → Settings → Webhooks set `https
 - If the camera is not available, type the code or the booking reference and press **Verify**.
 - The code is signed with `JWT_SECRET`. If you change `JWT_SECRET`, old QR codes stop working, so keep it the same.
 - After updating the code, run `npm install` (new packages: `qrcode`, `jsqr`).
+
+## Meeting rooms (online booking with Chapa)
+1. In Supabase SQL Editor run `supabase/meetings.sql` once (after `schema.sql`).
+2. **Admin → Meeting rooms → Add meeting room:** name and description in 3 languages, people, photos, features.
+   - **Time slots and prices:** e.g. Morning 08:00–12:00 = 5000, Full day 08:00–17:00 = 9000.
+   - **Choices:** a *Seating layout* is pick-one (U-shape, theatre); an *Extra* is tick-any (projector, lunch). Each can be free, one price per booking, or a price per person.
+3. Guests open **Meeting rooms** in the menu, choose a date, a free time slot, their choices, and pay with Chapa. The slot is held for the same 10 minutes. Same refund rule as rooms. A confirmation email is sent.
+4. **Reception → Meeting rooms** shows free and taken slots for any date and books walk-ins (cash, Telebirr, bank, POS or pay at the event). **Admin → Meeting bookings** lists everything, handles refunds and can block a time for maintenance.

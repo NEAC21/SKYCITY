@@ -3,8 +3,15 @@ import { db } from '@/lib/supabase';
 import { getSettings } from '@/lib/settings';
 import { refundFor } from '@/lib/booking';
 import { notify } from '@/lib/email';
+import { cancelMeetingByGuest } from '@/lib/meeting-guest';
 export const POST = handle(async (req) => {
   const { ref, email } = await req.json().catch(() => ({}));
+  const refUp = String(ref || '').trim().toUpperCase();
+  if (refUp.startsWith('MR')) {
+    const r = await cancelMeetingByGuest(refUp, String(email || '').trim().toLowerCase());
+    if (r.error) fail(r.status, r.error);
+    return json({ refund_amount: r.refund });
+  }
   const { data: b } = await db().from('bookings').select('*').eq('reference', String(ref || '').trim().toUpperCase()).maybeSingle();
   if (!b || (b.guest_email || '') !== String(email || '').trim().toLowerCase()) fail(404, 'Booking not found.');
   if (b.status !== 'confirmed') fail(400, 'This booking cannot be cancelled online.');

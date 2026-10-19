@@ -30,6 +30,36 @@ function Inner() {
   if (!b) return <div className="wrap pad"><p>{t('verifying')}</p></div>;
   const left = Math.max(0, b.hold_seconds_left - Math.floor((now - b._at) / 1000));
   const mm = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+  if (b.kind === 'meeting') {
+    const hh = (s) => String(s).slice(0, 5);
+    return (
+      <div className="wrap" style={{ paddingTop: 40, maxWidth: 640 }}>
+        <div className="card">
+          <span className={'status ' + b.status}>{t('status_' + b.status)}</span>
+          <h2 style={{ margin: '14px 0 4px' }}>{tr(b.room_name)}</h2>
+          <p className="muted" style={{ marginTop: 0 }}>{t('reference')}: <b>{b.reference}</b></p>
+          <dl className="sum">
+            <dt>{t('mt_event_date')}</dt><dd>{fmtDate(b.event_date)}</dd>
+            <dt>{t('mt_time')}</dt><dd>{tr(b.slot_name)} · {hh(b.start_time)}–{hh(b.end_time)}</dd>
+            <dt>{t('mt_attendees')}</dt><dd>{b.guests}</dd>
+            {(b.options || []).map((o) => <div key={o.id}><dt>{tr(o.name)}</dt><dd>{Number(o.amount).toLocaleString()} ETB</dd></div>)}
+            <dt>{t('total')}</dt><dd>{Number(b.total).toLocaleString()} ETB</dd>
+          </dl>
+          {b.status === 'pending' && left > 0 && <>
+            <p><b>{t('time_left', { t: mm })}</b></p>
+            {b.checkout_url && <a className="btn gold" href={b.checkout_url}>{t('continue_payment')}</a>}
+            <p className="note">{t('verifying')}</p>
+          </>}
+          {b.status === 'confirmed' && <p className="note">{t('policy', { h: settings.refund_hours, p: settings.refund_percent })}</p>}
+          {b.refund_status !== 'none' && Number(b.refund_amount) > 0 && <p className="ok">{t('refund_due', { amount: Number(b.refund_amount).toLocaleString() })}</p>}
+          {b.can_cancel && <button className="btn danger" onClick={cancel}>{t('cancel_booking')}</button>}
+          {msg && <p className="ok">{msg}</p>}
+          {err && <p className="err">{err}</p>}
+          {settings.phone && <p className="note" style={{ marginTop: 18 }}>{settings.phone}</p>}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="wrap" style={{ paddingTop: 40, maxWidth: 640 }}>
       <div className="card">

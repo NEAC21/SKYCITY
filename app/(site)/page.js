@@ -159,7 +159,10 @@ export default function Home() {
               <h2>{c('events_title')}</h2>
               <p className="lead" style={{ marginTop: 14 }}>{c('events_text')}</p>
               <ul className="bul"><li><Check />{c('events_b1')}</li><li><Check />{c('events_b2')}</li></ul>
-              <button className="link" onClick={() => setInq(true)}>{c('events_cta')} →</button>
+              <div className="pillrow" style={{ alignItems: 'center', gap: 20 }}>
+                <Link className="btn" href="/meetings">{t('mt_cta')}</Link>
+                <button className="link" onClick={() => setInq(true)}>{c('events_cta')} →</button>
+              </div>
             </div>
             {hall.length > 0 && <div className={'collage' + (hall.length === 1 ? ' one' : '')}>{hall.map((p) => <img key={p} src={p} alt="" loading="lazy" />)}</div>}
           </div>

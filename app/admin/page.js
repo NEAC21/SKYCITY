@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import StaffShell from '@/components/StaffShell';
+import MeetingDesk from '@/components/MeetingDesk';
 import { api, money, fmtDate, compressImage } from '@/lib/client';
 import { CONTENT_TEXT, CONTENT_PHOTOS } from '@/lib/content';
 import { DICT } from '@/lib/i18n';
@@ -10,12 +11,12 @@ export default function Admin() { return <StaffShell roles={['admin']}>{() => <T
 
 function Tabs() {
   const [tab, setTab] = useState('bookings');
-  const T = [['bookings', 'Bookings'], ['types', 'Room types'], ['rooms', 'Rooms'], ['inquiries', 'Event inquiries'], ['content', 'Website content'], ['settings', 'Settings'], ['staff', 'Staff']];
+  const T = [['bookings', 'Bookings'], ['types', 'Room types'], ['rooms', 'Rooms'], ['meetings', 'Meeting bookings'], ['meetingrooms', 'Meeting rooms'], ['inquiries', 'Event inquiries'], ['content', 'Website content'], ['settings', 'Settings'], ['staff', 'Staff']];
   return (
     <>
       <div className="tabs">{T.map(([k, l]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>
       {tab === 'bookings' && <Bookings />}{tab === 'types' && <Types />}{tab === 'rooms' && <Rooms />}
-      {tab === 'inquiries' && <Inquiries />}{tab === 'content' && <Content />}{tab === 'settings' && <Settings />}{tab === 'staff' && <Staff />}
+      {tab === 'meetings' && <MeetingDesk isAdmin />}{tab === 'meetingrooms' && <MeetingRooms />}{tab === 'inquiries' && <Inquiries />}{tab === 'content' && <Content />}{tab === 'settings' && <Settings />}{tab === 'staff' && <Staff />}
     </>
   );
 }
@@ -269,6 +270,81 @@ function Inquiries() {
             <td><button className={'btn sm' + (r.status === 'new' ? '' : ' ghost')} onClick={() => mark(r)}>{r.status === 'new' ? 'New · mark handled' : 'Handled'}</button></td></tr>))}
       </tbody></table></div>
       {rows.length === 0 && <p className="muted">No inquiries yet.</p>}
+    </>
+  );
+}
+
+const N3 = () => ({ en: '', am: '', om: '' });
+const blankMR = { name: N3(), description: N3(), capacity: 20, amenities: [], photos: [], active: true, slots: [], options: [] };
+const blankSlot = () => ({ name: N3(), start_time: '08:00', end_time: '12:00', price: '', active: true });
+const blankOpt = () => ({ name: N3(), kind: 'extra', price: '', price_type: 'flat', active: true });
+
+function MeetingRooms() {
+  const [list, setList] = useState([]), [edit, setEdit] = useState(null), [err, setErr] = useState('');
+  const load = useCallback(async () => { try { setList((await api('/api/admin/meeting-rooms')).rooms); } catch (e) { setErr(e.message); } }, []);
+  useEffect(() => { load(); }, [load]);
+  const save = async (e) => {
+    e.preventDefault(); setErr('');
+    try { await api(edit.id ? `/api/admin/meeting-rooms/${edit.id}` : '/api/admin/meeting-rooms', { method: edit.id ? 'PUT' : 'POST', body: edit }); setEdit(null); load(); } catch (x) { setErr(x.message); }
+  };
+  const del = async (r) => { if (!window.confirm('Delete this meeting room?')) return; try { await api(`/api/admin/meeting-rooms/${r.id}`, { method: 'DELETE' }); load(); } catch (x) { setErr(x.message); } };
+  const toggle = async (r) => { try { await api(`/api/admin/meeting-rooms/${r.id}`, { method: 'PUT', body: { ...r, active: !r.active } }); load(); } catch (x) { setErr(x.message); } };
+  if (edit) {
+    const nest = (k, l) => (e) => setEdit({ ...edit, [k]: { ...edit[k], [l]: e.target.value } });
+    const upd = (k, i, patch) => setEdit({ ...edit, [k]: edit[k].map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+    const updName = (k, i, l, v) => upd(k, i, { name: { ...edit[k][i].name, [l]: v } });
+    const rm = (k, i) => setEdit({ ...edit, [k]: edit[k].filter((_, j) => j !== i) });
+    return (
+      <form className="card" onSubmit={save}>
+        <h3 style={{ marginBottom: 14 }}>{edit.id ? 'Edit meeting room' : 'New meeting room'}</h3>
+        <div className="grid2">{L3.map(([l, n]) => <div className="field" key={l}><label>Name ({n})</label><input value={edit.name[l] || ''} onChange={nest('name', l)} required={l === 'en'} /></div>)}</div>
+        <div className="grid2">{L3.map(([l, n]) => <div className="field" key={l}><label>Description ({n})</label><textarea value={edit.description[l] || ''} onChange={nest('description', l)} /></div>)}</div>
+        <div className="grid2">
+          <div className="field"><label>Capacity (people)</label><input type="number" min="1" required value={edit.capacity} onChange={(e) => setEdit({ ...edit, capacity: e.target.value })} /></div>
+          <div className="field"><label>Features (comma separated, e.g. Projector, Wi-Fi, Air conditioning)</label><input value={edit.amenities.join(', ')} onChange={(e) => setEdit({ ...edit, amenities: e.target.value.split(',').map((x) => x.trimStart()) })} /></div>
+        </div>
+        <div className="field"><label>Photos</label><Photos value={edit.photos} onChange={(p) => setEdit({ ...edit, photos: p })} /></div>
+
+        <h3 style={{ margin: '18px 0 6px' }}>Time slots and prices</h3>
+        <p className="note">Guests book one slot per day. Example: Morning 08:00–12:00, Afternoon 13:00–17:00, Full day 08:00–17:00. Slots that overlap block each other automatically.</p>
+        {edit.slots.map((s, i) => (
+          <div className="rowx" key={s.id || 'n' + i}>
+            {L3.map(([l, n]) => <div className="field" key={l} style={{ margin: 0 }}><label>Name ({n})</label><input value={s.name[l] || ''} onChange={(e) => updName('slots', i, l, e.target.value)} /></div>)}
+            <div className="field" style={{ margin: 0 }}><label>From</label><input type="time" value={String(s.start_time).slice(0, 5)} onChange={(e) => upd('slots', i, { start_time: e.target.value })} /></div>
+            <div className="field" style={{ margin: 0 }}><label>To</label><input type="time" value={String(s.end_time).slice(0, 5)} onChange={(e) => upd('slots', i, { end_time: e.target.value })} /></div>
+            <div className="field" style={{ margin: 0 }}><label>Price (ETB)</label><input type="number" min="0" value={s.price} onChange={(e) => upd('slots', i, { price: e.target.value })} /></div>
+            <div style={{ alignSelf: 'end' }}><label className="opt" style={{ padding: 0 }}><input type="checkbox" checked={s.active !== false} onChange={(e) => upd('slots', i, { active: e.target.checked })} /><span>On</span></label><button type="button" className="btn sm danger" onClick={() => rm('slots', i)}>Remove</button></div>
+          </div>))}
+        <button type="button" className="btn sm ghost" onClick={() => setEdit({ ...edit, slots: [...edit.slots, blankSlot()] })}>+ Add time slot</button>
+
+        <h3 style={{ margin: '22px 0 6px' }}>Choices for the guest</h3>
+        <p className="note">“Seating layout” = the guest must pick exactly one (U-shape, theatre, classroom). “Extra” = the guest can tick any (projector, lunch, coffee break). Price is either one price for the booking or a price per person.</p>
+        {edit.options.map((o, i) => (
+          <div className="rowx" key={o.id || 'n' + i}>
+            {L3.map(([l, n]) => <div className="field" key={l} style={{ margin: 0 }}><label>Name ({n})</label><input value={o.name[l] || ''} onChange={(e) => updName('options', i, l, e.target.value)} /></div>)}
+            <div className="field" style={{ margin: 0 }}><label>Type</label><select value={o.kind} onChange={(e) => upd('options', i, { kind: e.target.value })}><option value="layout">Seating layout (pick one)</option><option value="extra">Extra (tick any)</option></select></div>
+            <div className="field" style={{ margin: 0 }}><label>Price (ETB, 0 = included)</label><input type="number" min="0" value={o.price} onChange={(e) => upd('options', i, { price: e.target.value })} /></div>
+            <div className="field" style={{ margin: 0 }}><label>Priced</label><select value={o.price_type} onChange={(e) => upd('options', i, { price_type: e.target.value })}><option value="flat">One price per booking</option><option value="per_guest">Per person</option></select></div>
+            <div style={{ alignSelf: 'end' }}><label className="opt" style={{ padding: 0 }}><input type="checkbox" checked={o.active !== false} onChange={(e) => upd('options', i, { active: e.target.checked })} /><span>On</span></label><button type="button" className="btn sm danger" onClick={() => rm('options', i)}>Remove</button></div>
+          </div>))}
+        <button type="button" className="btn sm ghost" onClick={() => setEdit({ ...edit, options: [...edit.options, blankOpt()] })}>+ Add choice</button>
+
+        <label className="opt" style={{ marginTop: 16 }}><input type="checkbox" checked={edit.active} onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /><span>Show on website</span></label>
+        {err && <p className="err">{err}</p>}
+        <div className="pillrow"><button className="btn gold">Save meeting room</button><button type="button" className="btn ghost" onClick={() => { setEdit(null); setErr(''); }}>Back</button></div>
+      </form>
+    );
+  }
+  return (
+    <>
+      <button className="btn gold" onClick={() => setEdit(blankMR)}>Add meeting room</button>
+      {err && <p className="err">{err}</p>}
+      <div className="scroll" style={{ marginTop: 14 }}><table className="tbl"><thead><tr><th>Photo</th><th>Name</th><th>People</th><th>Slots</th><th>Choices</th><th>Shown</th><th /></tr></thead><tbody>
+        {list.map((r) => (
+          <tr key={r.id}><td>{r.photos[0] ? <img className="thumbimg" src={r.photos[0]} alt="" /> : '—'}</td><td>{r.name.en}</td><td>{r.capacity}</td><td>{r.slots.length}</td><td>{r.options.length}</td><td>{r.active ? 'Yes' : 'Hidden'}</td>
+            <td style={{ whiteSpace: 'nowrap' }}><button className="btn sm" onClick={() => setEdit({ ...blankMR, ...r, amenities: r.amenities || [], photos: r.photos || [] })}>Edit</button>{' '}
+              <button className="btn sm ghost" onClick={() => toggle(r)}>{r.active ? 'Hide' : 'Show'}</button>{' '}<button className="btn sm danger" onClick={() => del(r)}>Delete</button></td></tr>))}
+      </tbody></table></div>
     </>
   );
 }
